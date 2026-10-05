@@ -1,0 +1,47 @@
+[project]
+name = "fastmcp-101-local"
+version = "0.1.0"
+description = "一步一步練習 FastMCP 的本地筆記 server"
+requires-python = ">=3.13,<3.14"
+dependencies = [
+    "fastmcp[apps]==4.0.11",
+    "prefab-ui==0.20.2",
+    "pydantic>=2,<3",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=1", "ruff", "ty"]
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+markers = [
+    "lesson1: greet 與 Client 連線",
+    "lesson2: tools 建立、搜尋、更新",
+    "lesson3: resource 與 prompt",
+    "lesson4: 人機互動",
+    "lesson5: 語音生成與 Progress",
+    "lesson6: MCP Apps 心智圖",
+]
+addopts = "--strict-markers"
+asyncio_default_fixture_loop_scope = "function"
+asyncio_default_test_loop_scope = "function"
+testpaths = ["tests"]
+pythonpath = ["src"]
+
+[tool.ruff]
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "UP", "B"]
+
+[tool.ruff.format]
+exclude = ["*.md"]
+
+[tool.ty.environment]
+extra-paths = ["src"]
+
+[tool.ty.rules]
+all = "error"
+
+[tool.ty.terminal]
+error-on-warning = true

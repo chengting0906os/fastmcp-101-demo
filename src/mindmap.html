@@ -1,0 +1,98 @@
+<!doctype html>
+<html lang="zh-Hant">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>本地筆記心智圖</title>
+<style>
+  * { box-sizing: border-box; }
+  body { margin: 0; padding: 20px; color: #20334b; background: #f7f9fc;
+    font-family: system-ui, sans-serif; }
+  header { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+  h1 { margin: 0 0 4px; font-size: 22px; }
+  p { margin: 0 0 14px; color: #61738a; font-size: 14px; }
+  button { background: white; border: 1px solid #ccd6e3; border-radius: 8px;
+    padding: 7px 12px; color: #20334b; cursor: pointer; }
+  button:hover { background: #eaf0ff; }
+  #canvas { border: 1px solid #dce4ee; border-radius: 16px; background: white; overflow: hidden; }
+  svg { display: block; width: 100%; height: 360px; touch-action: none; cursor: grab; }
+  svg path { fill: none; stroke: #b5c8e3; stroke-width: 2.5; }
+  svg rect { stroke: #cdd9e9; fill: #edf3fc; }
+  svg .root rect { fill: #315fc4; stroke: #315fc4; }
+  svg .root text { fill: white; font-weight: 600; }
+  svg .note rect { fill: white; }
+  svg .note { cursor: pointer; }
+  svg .note:hover rect, svg .note:focus rect { fill: #eaf0ff; stroke: #315fc4; }
+  svg text { fill: #20334b; font-size: 15px; pointer-events: none; }
+  #details { margin-top: 14px; padding: 16px; border-radius: 12px; background: white;
+    border: 1px solid #dce4ee; min-height: 140px; }
+  #note-title { margin: 0 0 4px; font-size: 18px; }
+  #note-source { color: #61738a; font-size: 12px; }
+  #note-content { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 10px;
+    max-height: 170px; overflow: auto; font: 14px/1.65 system-ui, sans-serif; }
+</style>
+<header>
+  <div><h1>本地筆記心智圖</h1><p>點筆記看內文 · 滾輪縮放 · 拖曳空白處移動畫面</p></div>
+  <div><button id="zoom-in" aria-label="放大">＋</button>
+    <button id="zoom-out" aria-label="縮小">－</button>
+    <button id="reset">重設</button></div>
+</header>
+<div id="canvas">__DIAGRAM__</div>
+<section id="details" aria-live="polite">
+  <h2 id="note-title">選一篇筆記</h2><span id="note-source"></span>
+  <div id="note-content">點筆記節點，在這裡閱讀內容。</div>
+</section>
+<script id="notes-data" type="application/json">__NOTES_DATA__</script>
+<script>
+  const notes = JSON.parse(document.getElementById("notes-data").textContent);
+  const svg = document.getElementById("diagram");
+  const initial = svg.getAttribute("viewBox").split(" ").map(Number);
+  let view = [...initial];
+  let dragging = null;
+  const applyView = () => svg.setAttribute("viewBox", view.join(" "));
+  const zoom = (factor) => {
+    const width = view[2] * factor, height = view[3] * factor;
+    if (width < 200 || width > 4800) return;
+    view = [view[0] + (view[2] - width) / 2, view[1] + (view[3] - height) / 2, width, height];
+    applyView();
+  };
+  document.getElementById("zoom-in").onclick = () => zoom(0.8);
+  document.getElementById("zoom-out").onclick = () => zoom(1.25);
+  document.getElementById("reset").onclick = () => { view = [...initial]; applyView(); };
+  const selectNote = (event) => {
+    const node = event.target.closest("g.note");
+    if (!node) return;
+    const note = notes.find(item => item.id === node.dataset.noteId);
+    if (!note) return;
+    document.getElementById("note-title").textContent = note.title;
+    document.getElementById("note-source").textContent = note.id + " · " + note.category;
+    document.getElementById("note-content").textContent = note.content;
+  };
+  svg.addEventListener("click", selectNote);
+  svg.addEventListener("keydown", event => {
+    if (event.key === "Enter" || event.key === " ") { event.preventDefault(); selectNote(event); }
+  });
+  svg.addEventListener("wheel", event => {
+    event.preventDefault(); zoom(event.deltaY > 0 ? 1.15 : 0.87);
+  }, { passive: false });
+  svg.addEventListener("pointerdown", event => {
+    if (event.button !== 0 || event.target.closest("g.note")) return;
+    dragging = [event.clientX, event.clientY, view[0], view[1]];
+    svg.setPointerCapture(event.pointerId);
+  });
+  svg.addEventListener("pointermove", event => {
+    if (!dragging) return;
+    const box = svg.getBoundingClientRect();
+    const scale = Math.max(view[2] / box.width, view[3] / box.height);
+    view[0] = dragging[2] - (event.clientX - dragging[0]) * scale;
+    view[1] = dragging[3] - (event.clientY - dragging[1]) * scale;
+    applyView();
+  });
+  const stopDragging = () => { dragging = null; };
+  svg.addEventListener("pointerup", stopDragging);
+  svg.addEventListener("pointercancel", stopDragging);
+  if (!notes.length) {
+    document.getElementById("note-title").textContent = "先建立筆記";
+    document.getElementById("note-content").textContent = "先呼叫 create_note，再重新開啟心智圖。";
+  }
+</script>
+</html>
